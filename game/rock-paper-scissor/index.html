@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rock Paper Scissors</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #e0f7fa;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 36px;
+      color: #00796b;
+    }
+
+    .choices {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 30px;
+      transition: opacity 0.5s ease;
+    }
+
+    button {
+      padding: 20px;
+      font-size: 40px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      transition: transform 0.3s ease, opacity 0.5s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button:active {
+      transform: scale(0.9);
+    }
+
+    button.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #result {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 30px;
+      opacity: 0;
+      color: #00796b;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #result.show {
+      opacity: 1;
+      animation: zoomIn 0.5s ease-in-out;
+    }
+
+    @keyframes zoomIn {
+      0% {
+        transform: scale(0.8);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Rock, Paper, Scissors</h1>
+    <div class="choices">
+      <button id="rock" onclick="playGame('rock')">✊</button>
+      <button id="paper" onclick="playGame('paper')">✋</button>
+      <button id="scissors" onclick="playGame('scissors')">✌️</button>
+    </div>
+    <div id="result">Make your move!</div>
+  </div>
+
+  <script>
+    function playGame(playerChoice) {
+      const choices = ['rock', 'paper', 'scissors'];
+      const computerChoice = choices[Math.floor(Math.random() * 3)];
+
+      // Hide buttons during result
+      const buttons = document.querySelectorAll('.choices button');
+      buttons.forEach(button => button.classList.add('hidden'));
+
+      let resultText = '';
+      if (playerChoice === computerChoice) {
+        resultText = `It's a tie! 🤝 Both chose ${getEmoji(playerChoice)}`;
+      } else if (
+        (playerChoice === 'rock' && computerChoice === 'scissors') ||
+        (playerChoice === 'paper' && computerChoice === 'rock') ||
+        (playerChoice === 'scissors' && computerChoice === 'paper')
+      ) {
+        resultText = `You win! 🎉 ${getEmoji(playerChoice)} beats ${getEmoji(computerChoice)}`;
+      } else {
+        resultText = `You lose! 😢 ${getEmoji(computerChoice)} beats ${getEmoji(playerChoice)}`;
+      }
+
+      // Display the result with animation
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = resultText;
+      resultDiv.classList.add('show');
+
+      // Reset the game after 2 seconds
+      setTimeout(resetGame, 2000);
+    }
+
+    function getEmoji(choice) {
+      if (choice === 'rock') return '✊';
+      if (choice === 'paper') return '✋';
+      if (choice === 'scissors') return '✌️';
+    }
+
+    function resetGame() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.classList.remove('show');
+      resultDiv.innerHTML = 'Make your move!';
+
+      // Show buttons again
+      const buttons = document.querySelectorAll('.choices button');
+      buttons.forEach(button => button.classList.remove('hidden'));
+    }
+  </script>
+</body>
+</html>

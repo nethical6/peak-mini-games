@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe AI</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            background-color: white;
+            border: 2px solid #000;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+        .cell:active {
+            transform: scale(0.95);
+        }
+        @media (max-width: 600px) {
+            #gameBoard {
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+            }
+            .cell {
+                font-size: 28px;
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Tic-Tac-Toe</h1>
+<div id="gameBoard"></div>
+
+<script>
+    const board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+    ];
+    let currentPlayer = 'X';
+    let aiDifficulty = getRandomDifficulty(); // Set a random difficulty level
+
+    const gameBoard = document.getElementById('gameBoard');
+
+    function createBoard() {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+                cell.addEventListener('click', handleCellClick);
+                gameBoard.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(event) {
+        const row = event.target.dataset.row;
+        const col = event.target.dataset.col;
+
+        if (board[row][col] === '' && currentPlayer === 'X') {
+            board[row][col] = 'X';
+            event.target.textContent = 'X';
+
+            if (checkWin('X')) {
+                setTimeout(() => alert('You win!'), 100);
+                resetGame();
+            } else if (checkTie()) {
+                setTimeout(() => alert('It\'s a tie!'), 100);
+                resetGame();
+            } else {
+                currentPlayer = 'O';
+                aiMove();
+            }
+        }
+    }
+
+    function aiMove() {
+        if (aiDifficulty === 'easy') {
+            randomMove(); // Easy AI makes a random move
+        } else if (aiDifficulty === 'medium') {
+            if (!blockPlayer()) {
+                randomMove(); // Medium AI blocks if possible, otherwise random
+            }
+        } else {
+            perfectMove(); // Hard AI uses the perfect strategy
+        }
+    }
+
+    function randomMove() {
+        const availableMoves = getAvailableMoves();
+        if (availableMoves.length > 0) {
+            const move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            board[move.row][move.col] = 'O';
+            const cell = gameBoard.children[move.row * 3 + move.col];
+            cell.textContent = 'O';
+            checkGameState('O');
+        }
+    }
+
+    function blockPlayer() {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (board[i][j] === '') {
+                    board[i][j] = 'O'; // Temporarily make a move
+                    if (checkWin('O')) {
+                        const cell = gameBoard.children[i * 3 + j];
+                        cell.textContent = 'O';
+                        return true; // Blocked the player
+                    }
+                    board[i][j] = ''; // Reset the cell
+                }
+            }
+        }
+        return false; // No block possible
+    }
+
+    function perfectMove() {
+        const availableMoves = getAvailableMoves();
+        let bestMove = null;
+        let bestScore = -Infinity;
+
+        for (const move of availableMoves) {
+            board[move.row][move.col] = 'O';
+            const score = minimax(board, 0, false);
+            board[move.row][move.col] = '';
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+
+        if (bestMove) {
+            board[bestMove.row][bestMove.col] = 'O';
+            const cell = gameBoard.children[bestMove.row * 3 + bestMove.col];
+            cell.textContent = 'O';
+            checkGameState('O');
+        }
+    }
+
+    function minimax(board, depth, isMaximizing) {
+        if (checkWin('O')) return 1; // AI wins
+        if (checkWin('X')) return -1; // Player wins
+        if (checkTie()) return 0; // Tie
+
+        if (isMaximizing) {
+            let bestScore = -Infinity;
+            for (const move of getAvailableMoves()) {
+                board[move.row][move.col] = 'O';
+                const score = minimax(board, depth + 1, false);
+                board[move.row][move.col] = '';
+                bestScore = Math.max(score, bestScore);
+            }
+            return bestScore;
+        } else {
+            let bestScore = Infinity;
+            for (const move of getAvailableMoves()) {
+                board[move.row][move.col] = 'X';
+                const score = minimax(board, depth + 1, true);
+                board[move.row][move.col] = '';
+                bestScore = Math.min(score, bestScore);
+            }
+            return bestScore;
+        }
+    }
+
+    function getAvailableMoves() {
+        const availableMoves = [];
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (board[i][j] === '') {
+                    availableMoves.push({ row: i, col: j });
+                }
+            }
+        }
+        return availableMoves;
+    }
+
+    function checkWin(player) {
+        for (let i = 0; i < 3; i++) {
+            if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true; // Check rows
+            if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true; // Check columns
+        }
+        if (board[0][0] === player && board[1][1] === player && board[2][2] === player) return true; // Check diagonal
+        if (board[0][2] === player && board[1][1] === player && board[2][0] === player) return true; // Check anti-diagonal
+        return false;
+    }
+
+    function checkTie() {
+        return board.flat().every(cell => cell !== '');
+    }
+
+    function checkGameState(player) {
+        if (checkWin(player)) {
+            setTimeout(() => alert(`${player === 'X' ? 'You' : 'AI'} win!`), 100);
+            resetGame();
+        } else if (checkTie()) {
+            setTimeout(() => alert('It\'s a tie!'), 100);
+            resetGame();
+        } else {
+            currentPlayer = 'X';
+        }
+    }
+
+    function resetGame() {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                board[i][j] = '';
+                gameBoard.children[i * 3 + j].textContent = '';
+            }
+        }
+        currentPlayer = 'X';
+        aiDifficulty = getRandomDifficulty(); // Set a new random difficulty for the next game
+    }
+
+    function getRandomDifficulty() {
+        const difficulties = ['easy', 'medium', 'hard','hard']; //more chances to get hard
+        return difficulties[Math.floor(Math.random() * difficulties.length)];
+    }
+
+    createBoard();
+</script>
+
+</body>
+</html>
