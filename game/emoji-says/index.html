@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simon Says Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f4f7;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            color: #2a9d8f;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #game {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        .button {
+            width: 100%;
+            height: 100px;
+            font-size: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: #264653;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .flash {
+            animation: flash 0.5s ease-in-out forwards;
+        }
+
+        @keyframes flash {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        #score {
+            font-size: 24px;
+            color: #264653;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #2a9d8f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #start-button:hover {
+            background-color: #21867a;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 600px) {
+            .button {
+                height: 80px;
+                font-size: 30px;
+            }
+
+            #score {
+                font-size: 20px;
+            }
+
+            #start-button {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Simon Says</h1>
+    <div id="game">
+        <div class="button" id="button1">🐶</div>
+        <div class="button" id="button2">🐱</div>
+        <div class="button" id="button3">🐰</div>
+        <div class="button" id="button4">🐻</div>
+    </div>
+    <div id="score">Score: 0</div>
+    <button id="start-button">Start Game</button>
+
+    <script>
+        const buttons = document.querySelectorAll('.button');
+        const scoreDisplay = document.getElementById('score');
+        const startButton = document.getElementById('start-button');
+        let sequence = [];
+        let userInput = [];
+        let score = 0;
+
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            sequence = [];
+            userInput = [];
+            nextRound();
+            startButton.disabled = true; // Disable the start button during the game
+        }
+
+        function nextRound() {
+            userInput = [];
+            const randomIndex = Math.floor(Math.random() * buttons.length);
+            sequence.push(randomIndex);
+            displaySequence();
+        }
+
+        function displaySequence() {
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i >= sequence.length) {
+                    clearInterval(interval);
+                    return;
+                }
+                flashButton(sequence[i]);
+                i++;
+            }, 1000);
+        }
+
+        function flashButton(index) {
+            buttons[index].classList.add('flash');
+            setTimeout(() => {
+                buttons[index].classList.remove('flash');
+            }, 500);
+        }
+
+        buttons.forEach((button, index) => {
+            button.addEventListener('click', () => {
+                userInput.push(index);
+                checkInput();
+                flashButton(index); // Flash the button when clicked
+            });
+        });
+
+        function checkInput() {
+            const currentIndex = userInput.length - 1;
+            if (userInput[currentIndex] !== sequence[currentIndex]) {
+                alert(`Game Over! Your score is ${score}`);
+                startButton.disabled = false; // Enable the start button after game over
+                return;
+            }
+            if (userInput.length === sequence.length) {
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                setTimeout(nextRound, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
