@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-a-Moyai Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f4f7;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: #2a9d8f;
+            margin-bottom: 20px;
+        }
+
+        #game {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .hole {
+            width: 100px;
+            height: 100px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            transition: background-color 0.3s;
+        }
+
+        .hole:hover {
+            background-color: #d0d7db; /* Change color on hover */
+        }
+
+        .moyai {
+            display: none; /* Start hidden */
+            font-size: 60px; /* Set font size for emoji */
+            transition: transform 0.2s;
+        }
+
+        #score {
+            font-size: 20px;
+            color: #264653;
+            margin-bottom: 20px;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #2a9d8f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #start-button:hover {
+            background-color: #21867a;
+        }
+
+        @media (max-width: 600px) {
+            .hole {
+                width: 80px;
+                height: 80px;
+            }
+
+            #game {
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            #score {
+                font-size: 18px;
+            }
+
+            #start-button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Whack-a-Moyai Game</h1>
+    <div id="game"></div>
+    <div id="score">Score: 0</div>
+    <button id="start-button">Start Game</button>
+
+    <script>
+        const gameBoard = document.getElementById('game');
+        const scoreDisplay = document.getElementById('score');
+        const startButton = document.getElementById('start-button');
+        let score = 0;
+        let moyaiInterval;
+        let gameDuration = 30; // Game duration in seconds
+
+        // Create holes for the game
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.classList.add('hole');
+            gameBoard.appendChild(hole);
+
+            const moyai = document.createElement('div');
+            moyai.classList.add('moyai');
+            moyai.textContent = '🗿'; // Moyai emoji
+            hole.appendChild(moyai);
+
+            // Handle moyai click
+            hole.addEventListener('click', () => {
+                if (moyai.style.display === 'block') {
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    hideMoyai(moyai);
+                }
+            });
+        }
+
+        // Start the game
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            startButton.disabled = true;
+            moyaiInterval = setInterval(showMoyai, 1000); // Show a moyai every second
+
+            // Stop the game after the duration
+            setTimeout(() => {
+                clearInterval(moyaiInterval);
+                alert(`Game Over! Your score is ${score}`);
+                startButton.disabled = false;
+            }, gameDuration * 1000);
+        }
+
+        // Show a moyai in a random hole
+        function showMoyai() {
+            const moyais = document.querySelectorAll('.moyai');
+            const randomIndex = Math.floor(Math.random() * moyais.length);
+            const moyai = moyais[randomIndex];
+            moyai.style.display = 'block'; // Show moyai
+
+            // Add animation to the moyai
+            moyai.style.transform = 'translateY(-20px)'; // Move up
+            setTimeout(() => {
+                moyai.style.transform = 'translateY(0)'; // Move back down
+            }, 100);
+
+            // Hide the moyai after a short time
+            setTimeout(() => {
+                hideMoyai(moyai);
+            }, 800);
+        }
+
+        // Hide the moyai
+        function hideMoyai(moyai) {
+            moyai.style.display = 'none'; // Hide moyai
+        }
+    </script>
+</body>
+</html>
