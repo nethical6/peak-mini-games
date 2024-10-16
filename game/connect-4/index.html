@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect 4 with AI</title>
+  <title>Fast Connect 4</title>
   <style>
     body {
       display: flex;
@@ -14,255 +14,275 @@
       font-family: 'Arial', sans-serif;
       margin: 0;
       flex-direction: column;
+      touch-action: manipulation;
+      user-select: none;
     }
 
     h1 {
       color: #2a9d8f;
       margin-bottom: 10px;
+      font-size: 24px;
     }
 
     #board {
       display: grid;
-      grid-template-columns: repeat(6, 60px);
-      grid-template-rows: repeat(5, 60px);
-      gap: 10px;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+      width: 90vw;
+      max-width: 400px;
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
     }
 
     .cell {
-      width: 60px;
-      height: 60px;
+      aspect-ratio: 1/1;
       background-color: #e9ecef;
       border-radius: 50%;
       border: 2px solid #343a40;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: background-color 0.3s ease-in-out;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .cell.filled {
-      background-color: #e9ecef;
+      transition: background-color 0.1s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .cell.player1 {
       background-color: #e63946;
     }
 
-    .cell.player2 {
+    .cell.ai {
       background-color: #457b9d;
     }
 
     #status {
-      margin-top: 20px;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       color: #264653;
-      transition: color 0.3s ease-in-out;
+      margin-bottom: 10px;
     }
 
-    @media (max-width: 600px) {
-      .cell {
-        width: 50px;
-        height: 50px;
-      }
+    .player-indicator {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
 
-      #board {
-        grid-template-columns: repeat(6, 50px);
-        grid-template-rows: repeat(5, 50px);
-        gap: 8px;
-      }
+    .player-color {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
 
-      h1 {
-        font-size: 24px;
-      }
+    .player1-color {
+      background-color: #e63946;
+    }
 
-      #status {
-        font-size: 18px;
-      }
+    .ai-color {
+      background-color: #457b9d;
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      font-weight: bold;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    #overlay button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #2a9d8f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Connect 4 with AI</h1>
+  <h1>Fast Connect 4</h1>
+
+  <div class="player-indicator">
+    <div><span class="player-color player1-color"></span>You</div>
+    <div><span class="player-color ai-color"></span>AI</div>
+  </div>
+
   <div id="board"></div>
-  <div id="status">Player 1's Turn</div>
+  <div id="status">Your turn</div>
+
+  <div id="overlay">
+    <div id="overlay-message"></div>
+    <button id="play-again">Play Again</button>
+  </div>
 
   <script>
     const board = document.getElementById('board');
     const status = document.getElementById('status');
-
-    const rows = 5;  // Reduced number of rows
-    const cols = 6;  // Kept number of columns
-    const boardArray = Array(rows).fill().map(() => Array(cols).fill(0));
+    const overlay = document.getElementById('overlay');
+    const overlayMessage = document.getElementById('overlay-message');
+    const playAgainButton = document.getElementById('play-again');
+    const androidInterfaceExists = typeof AndroidInterface !== 'undefined';
+    
+    const rows = 6;
+    const cols = 7;
+    let boardArray = Array(rows).fill().map(() => Array(cols).fill(0));
     let currentPlayer = 1;
     let isGameOver = false;
-    let aiDifficulty = '';
-    
-    // Set difficulty for AI (70% chance of Hard, 30% Easy)
-    function setDifficulty() {
-      const randomNum = Math.random();
-      aiDifficulty = randomNum < 0.7 ? 'hard' : 'easy';
-      console.log(`AI Difficulty: ${aiDifficulty}`);
-    }
+    let aiDifficulty = 'hard';
 
-    // Initialize the game board
     function initBoard() {
       board.innerHTML = '';
-      setDifficulty();
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
+      for (let c = 0; c < cols; c++) {
+        const column = document.createElement('div');
+        column.classList.add('column');
+        for (let r = 0; r < rows; r++) {
           const cell = document.createElement('div');
           cell.classList.add('cell');
           cell.dataset.row = r;
           cell.dataset.col = c;
-          cell.addEventListener('click', handleCellClick);
-          board.appendChild(cell);
+          column.appendChild(cell);
         }
+        column.addEventListener('click', () => handleColumnClick(c));
+        board.appendChild(column);
       }
     }
 
-    // Handle player's click on a column
-    function handleCellClick(e) {
+    function handleColumnClick(col) {
       if (isGameOver || currentPlayer !== 1) return;
-      const col = e.target.dataset.col;
-      dropPiece(col, currentPlayer);
+      const row = getLowestEmptyRow(col);
+      if (row !== -1) {
+        dropPiece(row, col, currentPlayer);
+      }
     }
 
-    // Drop the piece in the selected column
-    function dropPiece(col, player) {
+    function getLowestEmptyRow(col) {
       for (let r = rows - 1; r >= 0; r--) {
-        if (boardArray[r][col] === 0) {
-          boardArray[r][col] = player;
-          animatePieceDrop(r, col, player);
-          if (checkWinner(r, col, player)) {
-            isGameOver = true;
-            status.textContent = `Player ${player} Wins!`;
-            status.style.color = player === 1 ? '#e63946' : '#457b9d';
-            setTimeout(resetGame, 2000);
-          } else if (boardArray.flat().every(cell => cell !== 0)) {
-            isGameOver = true;
-            status.textContent = 'It\'s a tie!';
-            setTimeout(resetGame, 2000);
-          } else {
-            currentPlayer = player === 1 ? 2 : 1;
-            status.textContent = `Player ${currentPlayer}'s Turn`;
-            if (currentPlayer === 2) {
-              setTimeout(aiMove, 500); // Delay for AI move
-            }
-          }
-          break;
+        if (boardArray[r][col] === 0) return r;
+      }
+      return -1;
+    }
+
+    function dropPiece(row, col, player) {
+      boardArray[row][col] = player;
+      animatePieceDrop(row, col, player);
+      if (checkWinner(row, col, player)) {
+        endGame(`${player === 1 ? 'You' : 'AI'} Win!`);
+        sendGameOverUpdate(`${player === 1 ? 'You' : 'AI'} Win!`)
+      } else if (isBoardFull()) {
+        endGame("It's a tie!");
+        sendGameOverUpdate("It's a tie!")
+      } else {
+        currentPlayer = 3 - currentPlayer; // Switch between 1 and 2
+        updateStatus();
+        if (currentPlayer === 2) {
+          setTimeout(aiMove, 100); // Faster AI move
         }
       }
     }
-
-    // AI makes a move based on difficulty
-    function aiMove() {
-      let col;
-      if (aiDifficulty === 'hard') {
-        col = aiHardMove();  // Strategic move in Hard mode
-      } else {
-        col = aiEasyMove();  // Random move in Easy mode
-      }
-      dropPiece(col, currentPlayer);
+    function sendGameOverUpdate(msg){
+      if(androidInterfaceExists){        
+            AndroidInterface.onGameOver("Breakout score: "+msg);
+        }
     }
 
-    // Easy AI: Random valid move
-    function aiEasyMove() {
-      let validCols = [];
-      for (let c = 0; c < cols; c++) {
-        if (boardArray[0][c] === 0) validCols.push(c); // Add columns with space
+    function animatePieceDrop(row, col, player) {
+      const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+      cell.classList.add(player === 1 ? 'player1' : 'ai');
+    }
+
+    function checkWinner(row, col, player) {
+      const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+      return directions.some(([dx, dy]) => {
+        const count = 1 + countDirection(row, col, player, dx, dy) + countDirection(row, col, player, -dx, -dy);
+        return count >= 4;
+      });
+    }
+
+    function countDirection(row, col, player, dx, dy) {
+      let count = 0;
+      for (let i = 1; i < 4; i++) {
+        const newRow = row + i * dy;
+        const newCol = col + i * dx;
+        if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols || boardArray[newRow][newCol] !== player) break;
+        count++;
       }
+      return count;
+    }
+
+    function isBoardFull() {
+      return boardArray[0].every(cell => cell !== 0);
+    }
+
+    function aiMove() {
+      const col = aiDifficulty === 'hard' ? aiHardMove() : aiEasyMove();
+      const row = getLowestEmptyRow(col);
+      if (row !== -1) {
+        dropPiece(row, col, currentPlayer);
+      }
+    }
+
+    function aiEasyMove() {
+      const validCols = boardArray[0].reduce((acc, cell, index) => cell === 0 ? [...acc, index] : acc, []);
       return validCols[Math.floor(Math.random() * validCols.length)];
     }
 
-    // Hard AI: Block the player or win if possible
     function aiHardMove() {
-      // Try to win or block player
-      for (let c = 0; c < cols; c++) {
-        for (let r = rows - 1; r >= 0; r--) {
-          if (boardArray[r][c] === 0) {
-            boardArray[r][c] = 2;
-            if (checkWinner(r, c, 2)) {
-              boardArray[r][c] = 0; // Revert after check
+      for (let player of [2, 1]) { // Check for AI win, then player block
+        for (let c = 0; c < cols; c++) {
+          const r = getLowestEmptyRow(c);
+          if (r !== -1) {
+            boardArray[r][c] = player;
+            if (checkWinner(r, c, player)) {
+              boardArray[r][c] = 0;
               return c;
             }
-            boardArray[r][c] = 0; // Revert after check
-            break;
+            boardArray[r][c] = 0;
           }
         }
       }
-      // Block player
-      for (let c = 0; c < cols; c++) {
-        for (let r = rows - 1; r >= 0; r--) {
-          if (boardArray[r][c] === 0) {
-            boardArray[r][c] = 1;
-            if (checkWinner(r, c, 1)) {
-              boardArray[r][c] = 0; // Revert after check
-              return c;
-            }
-            boardArray[r][c] = 0; // Revert after check
-            break;
-          }
-        }
-      }
-      // If no blocking or winning move, pick random
       return aiEasyMove();
     }
 
-    // Animate the piece falling into the cell
-    function animatePieceDrop(row, col, player) {
-      const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-      const playerClass = player === 1 ? 'player1' : 'player2';
-      cell.classList.add(playerClass, 'filled');
+    function updateStatus() {
+      status.textContent = currentPlayer === 1 ? 'Your turn' : 'AI turn';
     }
 
-    // Check for a winner
-    function checkWinner(row, col, player) {
-      return checkDirection(row, col, 1, 0, player) || // Horizontal
-             checkDirection(row, col, 0, 1, player) || // Vertical
-             checkDirection(row, col, 1, 1, player) || // Diagonal \
-             checkDirection(row, col, 1, -1, player);  // Diagonal /
+    function endGame(message) {
+      isGameOver = true;
+      overlayMessage.textContent = message;
+      overlay.style.display = 'flex';
     }
 
-    // Check in a specific direction for 4-in-a-row
-    function checkDirection(row, col, rowDir, colDir, player) {
-      let count = 0;
-      let r = row;
-      let c = col;
-
-      // Check forward direction
-      while (r >= 0 && r < rows && c >= 0 && c < cols && boardArray[r][c] === player) {
-        count++;
-        r += rowDir;
-        c += colDir;
-      }
-
-      r = row - rowDir;
-      c = col - colDir;
-
-      // Check backward direction
-      while (r >= 0 && r < rows && c >= 0 && c < cols && boardArray[r][c] === player) {
-        count++;
-        r -= rowDir;
-        c -= colDir;
-      }
-
-      return count >= 4;
-    }
-
-    // Reset the game after someone wins
     function resetGame() {
-      boardArray.forEach(row => row.fill(0));
+      boardArray = Array(rows).fill().map(() => Array(cols).fill(0));
       currentPlayer = 1;
       isGameOver = false;
-      status.textContent = 'Player 1\'s Turn';
       initBoard();
+      updateStatus();
+      overlay.style.display = 'none';
     }
 
-    // Start the game
-    initBoard();
+    playAgainButton.addEventListener('click', resetGame);
+
+    window.onload = () => {
+      initBoard();
+      updateStatus();
+    };
   </script>
 </body>
 </html>

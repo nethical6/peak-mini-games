@@ -5,26 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rock Paper Scissors</title>
   <style>
+    :root {
+      --primary-color: #00796b;
+      --secondary-color: #4CAF50;
+      --background-color: #e0f7fa;
+      --text-color: #333;
+    }
+
     body {
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      background-color: #e0f7fa;
+      min-height: 100vh;
+      background-color: var(--background-color);
       font-family: Arial, sans-serif;
       margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+      user-select: none;
     }
 
     .container {
       text-align: center;
       max-width: 400px;
       width: 100%;
+      background-color: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     }
 
     h1 {
-      margin-bottom: 20px;
-      font-size: 36px;
-      color: #00796b;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+      color: var(--primary-color);
     }
 
     .choices {
@@ -36,17 +50,23 @@
 
     button {
       padding: 20px;
-      font-size: 40px;
+      font-size: 2.5rem;
       border: none;
-      border-radius: 10px;
+      border-radius: 50%;
       cursor: pointer;
-      background-color: #4CAF50;
+      background-color: var(--secondary-color);
       color: white;
-      transition: transform 0.3s ease, opacity 0.5s ease;
+      transition: transform 0.3s ease, opacity 0.5s ease, background-color 0.3s ease;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     button:hover {
       background-color: #45a049;
+      transform: scale(1.1);
     }
 
     button:active {
@@ -59,12 +79,13 @@
     }
 
     #result {
-      font-size: 28px;
+      font-size: 1.5rem;
       font-weight: bold;
       margin-top: 30px;
       opacity: 0;
-      color: #00796b;
+      color: var(--primary-color);
       transition: opacity 0.5s ease-in-out;
+      min-height: 60px;
     }
 
     #result.show {
@@ -72,13 +93,15 @@
       animation: zoomIn 0.5s ease-in-out;
     }
 
+    #score {
+      font-size: 1.2rem;
+      margin-top: 20px;
+      color: var(--text-color);
+    }
+
     @keyframes zoomIn {
-      0% {
-        transform: scale(0.8);
-      }
-      100% {
-        transform: scale(1);
-      }
+      0% { transform: scale(0.8); }
+      100% { transform: scale(1); }
     }
 
     .fade-in {
@@ -86,54 +109,87 @@
     }
 
     @keyframes fadeIn {
-      0% {
-        opacity: 0;
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 2rem;
       }
-      100% {
-        opacity: 1;
+
+      button {
+        font-size: 2rem;
+        width: 70px;
+        height: 70px;
+      }
+
+      #result {
+        font-size: 1.2rem;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Rock, Paper, Scissors</h1>
+    <h1>Rock Paper Scissors</h1>
     <div class="choices">
       <button id="rock" onclick="playGame('rock')">✊</button>
       <button id="paper" onclick="playGame('paper')">✋</button>
       <button id="scissors" onclick="playGame('scissors')">✌️</button>
     </div>
     <div id="result">Make your move!</div>
+    <div id="score">Wins: 0 | Losses: 0 | Ties: 0</div>
   </div>
 
   <script>
+    let wins = 0;
+    let losses = 0;
+    let ties = 0;
+
+    const androidInterfaceExists = typeof AndroidInterface !== 'undefined';
+
+    function sendGameUpdate(result) {
+      if (androidInterfaceExists) {
+        AndroidInterface.onGameResult("Rock Paper Scissors: " + result);
+      }
+    }
+
     function playGame(playerChoice) {
       const choices = ['rock', 'paper', 'scissors'];
       const computerChoice = choices[Math.floor(Math.random() * 3)];
 
-      // Hide buttons during result
       const buttons = document.querySelectorAll('.choices button');
       buttons.forEach(button => button.classList.add('hidden'));
 
       let resultText = '';
+      let gameResult = '';
+
       if (playerChoice === computerChoice) {
         resultText = `It's a tie! 🤝 Both chose ${getEmoji(playerChoice)}`;
+        ties++;
+        gameResult = 'Tie';
       } else if (
         (playerChoice === 'rock' && computerChoice === 'scissors') ||
         (playerChoice === 'paper' && computerChoice === 'rock') ||
         (playerChoice === 'scissors' && computerChoice === 'paper')
       ) {
         resultText = `You win! 🎉 ${getEmoji(playerChoice)} beats ${getEmoji(computerChoice)}`;
+        wins++;
+        gameResult = 'Win';
       } else {
         resultText = `You lose! 😢 ${getEmoji(computerChoice)} beats ${getEmoji(playerChoice)}`;
+        losses++;
+        gameResult = 'Loss';
       }
 
-      // Display the result with animation
       const resultDiv = document.getElementById('result');
       resultDiv.innerHTML = resultText;
       resultDiv.classList.add('show');
 
-      // Reset the game after 2 seconds
+      updateScore();
+      sendGameUpdate(gameResult);
+
       setTimeout(resetGame, 2000);
     }
 
@@ -148,9 +204,13 @@
       resultDiv.classList.remove('show');
       resultDiv.innerHTML = 'Make your move!';
 
-      // Show buttons again
       const buttons = document.querySelectorAll('.choices button');
       buttons.forEach(button => button.classList.remove('hidden'));
+    }
+
+    function updateScore() {
+      const scoreDiv = document.getElementById('score');
+      scoreDiv.innerHTML = `Wins: ${wins} | Losses: ${losses} | Ties: ${ties}`;
     }
   </script>
 </body>

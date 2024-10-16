@@ -86,7 +86,7 @@ function draw() {
         context.fillText("Score:"+score, canvas.width / 2, canvas.height / 2 + 120); // Centered horizontally
 
         if(androidInterfaceExists){        
-            AndroidInterface.onGameOver();
+            AndroidInterface.onGameOver("Breakout score: "+score.toString());
         }
         return; // Stop the draw loop if game is over
     }

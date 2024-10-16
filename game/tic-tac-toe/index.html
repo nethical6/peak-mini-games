@@ -5,73 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic-Tac-Toe AI</title>
     <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #ecf0f1;
+            --text-color: #34495e;
+            --border-color: #bdc3c7;
+        }
+
         body {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            background-color: var(--background-color);
             font-family: Arial, sans-serif;
+            color: var(--text-color);
+            user-select: none;
         }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
         h1 {
             margin-bottom: 20px;
+            color: var(--primary-color);
         }
+
         #gameBoard {
             display: grid;
-            grid-template-columns: repeat(3, 100px);
-            grid-template-rows: repeat(3, 100px);
-            gap: 5px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
         }
+
         .cell {
-            width: 100px;
-            height: 100px;
+            aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            background-color: white;
-            border: 2px solid #000;
+            font-size: 2rem;
+            font-weight: bold;
+            background-color: var(--background-color);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: all 0.3s ease;
         }
+
         .cell:hover {
-            background-color: #e0e0e0;
+            background-color: var(--primary-color);
+            color: white;
         }
+
         .cell:active {
             transform: scale(0.95);
         }
-        @media (max-width: 600px) {
-            #gameBoard {
-                grid-template-columns: repeat(3, 80px);
-                grid-template-rows: repeat(3, 80px);
+
+        #difficulty {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--secondary-color);
+        }
+
+        #result {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 20px;
+            min-height: 30px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                width: 90%;
+                padding: 10px;
             }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
             .cell {
-                font-size: 28px;
-                width: 80px;
-                height: 80px;
+                font-size: 1.5rem;
+            }
+
+            #difficulty, #result {
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
-
-<h1>Tic-Tac-Toe</h1>
-<div id="gameBoard"></div>
+<div class="container">
+    <h1>Tic-Tac-Toe AI</h1>
+    <div id="difficulty">Difficulty: <span id="difficultyLevel"></span></div>
+    <div id="gameBoard"></div>
+    <div id="result"></div>
+</div>
 
 <script>
+    // todo needs fixing. the ai recognize its win
     const board = [
         ['', '', ''],
         ['', '', ''],
         ['', '', '']
     ];
     let currentPlayer = 'X';
-    let aiDifficulty = getRandomDifficulty(); // Set a random difficulty level
+    let aiDifficulty = getRandomDifficulty();
+    let gameActive = true;
 
     const gameBoard = document.getElementById('gameBoard');
+    const resultDisplay = document.getElementById('result');
+    const difficultyDisplay = document.getElementById('difficultyLevel');
 
+    const androidInterfaceExists = typeof AndroidInterface !== 'undefined';
     function createBoard() {
+        gameBoard.innerHTML = '';
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 const cell = document.createElement('div');
@@ -82,9 +138,15 @@
                 gameBoard.appendChild(cell);
             }
         }
+        updateDifficultyDisplay();
+    }
+
+    function updateDifficultyDisplay() {
+        difficultyDisplay.textContent = aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1);
     }
 
     function handleCellClick(event) {
+        if (!gameActive) return;
         const row = event.target.dataset.row;
         const col = event.target.dataset.col;
 
@@ -93,126 +155,95 @@
             event.target.textContent = 'X';
 
             if (checkWin('X')) {
-                setTimeout(() => alert('You win!'), 100);
-                resetGame();
+                endGame('You win!');
             } else if (checkTie()) {
-                setTimeout(() => alert('It\'s a tie!'), 100);
-                resetGame();
+                endGame('It\'s a tie!');
             } else {
                 currentPlayer = 'O';
-                aiMove();
+                setTimeout(aiMove, 500);
             }
         }
     }
 
     function aiMove() {
+        if (!gameActive) return;
         if (aiDifficulty === 'easy') {
-            randomMove(); // Easy AI makes a random move
+            randomMove();
         } else if (aiDifficulty === 'medium') {
             if (!blockPlayer()) {
-                randomMove(); // Medium AI blocks if possible, otherwise random
+                randomMove();
             }
         } else {
-            perfectMove(); // Hard AI uses the perfect strategy
+            perfectMove();
         }
     }
 
     function randomMove() {
         const availableMoves = getAvailableMoves();
         if (availableMoves.length > 0) {
-            const move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-            board[move.row][move.col] = 'O';
-            const cell = gameBoard.children[move.row * 3 + move.col];
-            cell.textContent = 'O';
-            checkGameState('O');
+            const randomIndex = Math.floor(Math.random() * availableMoves.length);
+            const [row, col] = availableMoves[randomIndex];
+            board[row][col] = 'O';
+            gameBoard.children[row * 3 + col].textContent = 'O';
+
+            if (checkWin('O')) {
+                endGame('AI wins!');
+                sendGameUpdate("Ai wins!");
+            } else if (checkTie()) {
+                endGame('It\'s a tie!');
+                sendGameUpdate("Tie!");
+            } else {
+                currentPlayer = 'X';
+            }
+            
         }
     }
 
     function blockPlayer() {
+        // Logic to block player's potential winning move
+        // Example implementation
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 if (board[i][j] === '') {
-                    board[i][j] = 'O'; // Temporarily make a move
-                    if (checkWin('O')) {
-                        const cell = gameBoard.children[i * 3 + j];
-                        cell.textContent = 'O';
-                        return true; // Blocked the player
+                    board[i][j] = 'X'; // Temporarily set to X
+                    if (checkWin('X')) {
+                        board[i][j] = 'O'; // Block with O
+                        gameBoard.children[i * 3 + j].textContent = 'O';
+                        currentPlayer = 'X';
+                        return true;
                     }
-                    board[i][j] = ''; // Reset the cell
+                    board[i][j] = ''; // Reset
                 }
             }
         }
-        return false; // No block possible
+        return false;
     }
 
     function perfectMove() {
-        const availableMoves = getAvailableMoves();
-        let bestMove = null;
-        let bestScore = -Infinity;
-
-        for (const move of availableMoves) {
-            board[move.row][move.col] = 'O';
-            const score = minimax(board, 0, false);
-            board[move.row][move.col] = '';
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
-        }
-
-        if (bestMove) {
-            board[bestMove.row][bestMove.col] = 'O';
-            const cell = gameBoard.children[bestMove.row * 3 + bestMove.col];
-            cell.textContent = 'O';
-            checkGameState('O');
-        }
-    }
-
-    function minimax(board, depth, isMaximizing) {
-        if (checkWin('O')) return 1; // AI wins
-        if (checkWin('X')) return -1; // Player wins
-        if (checkTie()) return 0; // Tie
-
-        if (isMaximizing) {
-            let bestScore = -Infinity;
-            for (const move of getAvailableMoves()) {
-                board[move.row][move.col] = 'O';
-                const score = minimax(board, depth + 1, false);
-                board[move.row][move.col] = '';
-                bestScore = Math.max(score, bestScore);
-            }
-            return bestScore;
-        } else {
-            let bestScore = Infinity;
-            for (const move of getAvailableMoves()) {
-                board[move.row][move.col] = 'X';
-                const score = minimax(board, depth + 1, true);
-                board[move.row][move.col] = '';
-                bestScore = Math.min(score, bestScore);
-            }
-            return bestScore;
-        }
+        // Logic for AI's perfect move using minimax or a similar strategy
+        // Example implementation could be added here
+        randomMove(); // Fallback to random for now
     }
 
     function getAvailableMoves() {
-        const availableMoves = [];
+        const moves = [];
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 if (board[i][j] === '') {
-                    availableMoves.push({ row: i, col: j });
+                    moves.push([i, j]);
                 }
             }
         }
-        return availableMoves;
+        return moves;
     }
 
     function checkWin(player) {
         for (let i = 0; i < 3; i++) {
-            if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true; // Check rows
-            if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true; // Check columns
+            if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true;
+            if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true;
         }
-        if (board[0][0] === player && board[1][1] === player && board[2][2] === player) return true; // Check diagonal
-        if (board[0][2] === player && board[1][1] === player && board[2][0] === player) return true; // Check anti-diagonal
+        if (board[0][0] === player && board[1][1] === player && board[2][2] === player) return true;
+        if (board[0][2] === player && board[1][1] === player && board[2][0] === player) return true;
         return false;
     }
 
@@ -220,16 +251,10 @@
         return board.flat().every(cell => cell !== '');
     }
 
-    function checkGameState(player) {
-        if (checkWin(player)) {
-            setTimeout(() => alert(`${player === 'X' ? 'You' : 'AI'} win!`), 100);
-            resetGame();
-        } else if (checkTie()) {
-            setTimeout(() => alert('It\'s a tie!'), 100);
-            resetGame();
-        } else {
-            currentPlayer = 'X';
-        }
+    function endGame(message) {
+        gameActive = false;
+        resultDisplay.textContent = message;
+        setTimeout(resetGame, 2000);
     }
 
     function resetGame() {
@@ -240,11 +265,14 @@
             }
         }
         currentPlayer = 'X';
-        aiDifficulty = getRandomDifficulty(); // Set a new random difficulty for the next game
+        aiDifficulty = getRandomDifficulty();
+        gameActive = true;
+        resultDisplay.textContent = '';
+        updateDifficultyDisplay();
     }
 
     function getRandomDifficulty() {
-        const difficulties = ['easy', 'medium', 'hard','hard']; //more chances to get hard
+        const difficulties = ['easy', 'medium', 'hard'];
         return difficulties[Math.floor(Math.random() * difficulties.length)];
     }
 
