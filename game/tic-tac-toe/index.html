@@ -11,6 +11,7 @@
             --background-color: #ecf0f1;
             --text-color: #34495e;
             --border-color: #bdc3c7;
+            --disabled-color: #95a5a6;
         }
 
         body {
@@ -32,11 +33,14 @@
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
         }
 
         h1 {
             margin-bottom: 20px;
             color: var(--primary-color);
+            font-size: 2rem;
         }
 
         #gameBoard {
@@ -51,7 +55,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: bold;
             background-color: var(--background-color);
             border: 2px solid var(--border-color);
@@ -82,9 +86,29 @@
             min-height: 30px;
         }
 
+        #resetButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #resetButton:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+
+        #resetButton:disabled {
+            background-color: var(--disabled-color);
+            cursor: not-allowed;
+        }
+
         @media (max-width: 480px) {
             .container {
-                width: 90%;
                 padding: 10px;
             }
 
@@ -93,7 +117,7 @@
             }
 
             .cell {
-                font-size: 1.5rem;
+                font-size: 2rem;
             }
 
             #difficulty, #result {
@@ -108,10 +132,10 @@
     <div id="difficulty">Difficulty: <span id="difficultyLevel"></span></div>
     <div id="gameBoard"></div>
     <div id="result"></div>
+    <button id="resetButton">New Game</button>
 </div>
 
 <script>
-    // todo needs fixing. the ai recognize its win
     const board = [
         ['', '', ''],
         ['', '', ''],
@@ -124,8 +148,10 @@
     const gameBoard = document.getElementById('gameBoard');
     const resultDisplay = document.getElementById('result');
     const difficultyDisplay = document.getElementById('difficultyLevel');
+    const resetButton = document.getElementById('resetButton');
 
     const androidInterfaceExists = typeof AndroidInterface !== 'undefined';
+
     function createBoard() {
         gameBoard.innerHTML = '';
         for (let i = 0; i < 3; i++) {
@@ -139,6 +165,7 @@
             }
         }
         updateDifficultyDisplay();
+        resetButton.disabled = false;
     }
 
     function updateDifficultyDisplay() {
@@ -147,13 +174,12 @@
 
     function handleCellClick(event) {
         if (!gameActive) return;
-        const row = event.target.dataset.row;
-        const col = event.target.dataset.col;
+        const row = parseInt(event.target.dataset.row);
+        const col = parseInt(event.target.dataset.col);
 
         if (board[row][col] === '' && currentPlayer === 'X') {
-            board[row][col] = 'X';
-            event.target.textContent = 'X';
-
+            makeMove(row, col, 'X');
+            resetButton.disabled = true;
             if (checkWin('X')) {
                 endGame('You win!');
             } else if (checkTie()) {
@@ -165,16 +191,31 @@
         }
     }
 
+    function makeMove(row, col, player) {
+        board[row][col] = player;
+        gameBoard.children[row * 3 + col].textContent = player;
+    }
+
     function aiMove() {
         if (!gameActive) return;
+        let move;
         if (aiDifficulty === 'easy') {
-            randomMove();
+            move = randomMove();
         } else if (aiDifficulty === 'medium') {
-            if (!blockPlayer()) {
-                randomMove();
-            }
+            move = mediumMove();
         } else {
-            perfectMove();
+            move = bestMove();
+        }
+
+        if (move) {
+            makeMove(move.row, move.col, 'O');
+            if (checkWin('O')) {
+                endGame('AI wins!');
+            } else if (checkTie()) {
+                endGame('It\'s a tie!');
+            } else {
+                currentPlayer = 'X';
+            }
         }
     }
 
@@ -182,47 +223,91 @@
         const availableMoves = getAvailableMoves();
         if (availableMoves.length > 0) {
             const randomIndex = Math.floor(Math.random() * availableMoves.length);
-            const [row, col] = availableMoves[randomIndex];
-            board[row][col] = 'O';
-            gameBoard.children[row * 3 + col].textContent = 'O';
-
-            if (checkWin('O')) {
-                endGame('AI wins!');
-                sendGameUpdate("Ai wins!");
-            } else if (checkTie()) {
-                endGame('It\'s a tie!');
-                sendGameUpdate("Tie!");
-            } else {
-                currentPlayer = 'X';
-            }
-            
+            return availableMoves[randomIndex];
         }
+        return null;
     }
 
-    function blockPlayer() {
-        // Logic to block player's potential winning move
-        // Example implementation
+    function mediumMove() {
+        // Try to win
+        const winningMove = findWinningMove('O');
+        if (winningMove) return winningMove;
+
+        // Block player's winning move
+        const blockingMove = findWinningMove('X');
+        if (blockingMove) return blockingMove;
+
+        // Make a random move
+        return randomMove();
+    }
+
+    function bestMove() {
+        let bestScore = -Infinity;
+        let move;
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 if (board[i][j] === '') {
-                    board[i][j] = 'X'; // Temporarily set to X
-                    if (checkWin('X')) {
-                        board[i][j] = 'O'; // Block with O
-                        gameBoard.children[i * 3 + j].textContent = 'O';
-                        currentPlayer = 'X';
-                        return true;
+                    board[i][j] = 'O';
+                    let score = minimax(board, 0, false);
+                    board[i][j] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        move = { row: i, col: j };
                     }
-                    board[i][j] = ''; // Reset
                 }
             }
         }
-        return false;
+        return move;
     }
 
-    function perfectMove() {
-        // Logic for AI's perfect move using minimax or a similar strategy
-        // Example implementation could be added here
-        randomMove(); // Fallback to random for now
+    function minimax(board, depth, isMaximizing) {
+        if (checkWin('O')) return 10 - depth;
+        if (checkWin('X')) return depth - 10;
+        if (checkTie()) return 0;
+
+        if (isMaximizing) {
+            let bestScore = -Infinity;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[i][j] === '') {
+                        board[i][j] = 'O';
+                        let score = minimax(board, depth + 1, false);
+                        board[i][j] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+            }
+            return bestScore;
+        } else {
+            let bestScore = Infinity;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[i][j] === '') {
+                        board[i][j] = 'X';
+                        let score = minimax(board, depth + 1, true);
+                        board[i][j] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+            }
+            return bestScore;
+        }
+    }
+
+    function findWinningMove(player) {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (board[i][j] === '') {
+                    board[i][j] = player;
+                    if (checkWin(player)) {
+                        board[i][j] = '';
+                        return { row: i, col: j };
+                    }
+                    board[i][j] = '';
+                }
+            }
+        }
+        return null;
     }
 
     function getAvailableMoves() {
@@ -230,7 +315,7 @@
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 if (board[i][j] === '') {
-                    moves.push([i, j]);
+                    moves.push({ row: i, col: j });
                 }
             }
         }
@@ -254,7 +339,10 @@
     function endGame(message) {
         gameActive = false;
         resultDisplay.textContent = message;
-        setTimeout(resetGame, 2000);
+        resetButton.disabled = false;
+        if (androidInterfaceExists) {
+            AndroidInterface.onGameOver("Tic-Tac-Toe: " + message);
+        }
     }
 
     function resetGame() {
@@ -269,6 +357,7 @@
         gameActive = true;
         resultDisplay.textContent = '';
         updateDifficultyDisplay();
+        resetButton.disabled = false;
     }
 
     function getRandomDifficulty() {
@@ -276,6 +365,7 @@
         return difficulties[Math.floor(Math.random() * difficulties.length)];
     }
 
+    resetButton.addEventListener('click', resetGame);
     createBoard();
 </script>
 

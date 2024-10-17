@@ -183,12 +183,12 @@
         gameResult = 'Loss';
       }
 
+      sendGameUpdate(gameResult);
       const resultDiv = document.getElementById('result');
       resultDiv.innerHTML = resultText;
       resultDiv.classList.add('show');
 
       updateScore();
-      sendGameUpdate(gameResult);
 
       setTimeout(resetGame, 2000);
     }
